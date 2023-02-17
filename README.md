@@ -84,193 +84,111 @@ Every code patch accepted in Taiga codebase is licensed under [MPL 2.0](LICENSE)
 
 Please read carefully [our license](LICENSE) and ask us if you have any questions as well as the [Contribution policy](https://github.com/kaleidos-ventures/taiga-docker/blob/main/CONTRIBUTING.md).
 
-## Configuration and Customisation with Environment Variables
+## Configuration with Environment Variables
 
-The docker-compose.yml has some environment variables of **configuration** with default values that we strongly recommend to change. Those variables are needed to run Taiga. Find them in the `docker-compose.yml` and `docker-compose-inits.yml`.
+We've exposed the ** Basic configuration ** and the most commonly modified settings in Taiga to an `.env` file. We strongly recommend you to change it, or at least review its content, to avoid using the default values.
 
-**Important** Don't forget to review environment variables in `docker-compose-inits.yml` as some of them are in both files.
+Both `docker-compose.yml` and `docker-compose-inits.yml` will read from this file to populate their environment variables, so, initially you don't need to change them. Edit these files just in case you require to enable **Additional customization**, or an **Advanced configuration**.
 
-Apart from this configuration, you can have some **customisation** in Taiga, and add features that by default are disabled. Find those variables in the **Customisation** section and add the corresponding environment variables whenever you want to enable them.
+Refer to these sections for further information.
 
-## Configuration
+## Basic Configuration
 
-### Database configuration
+You will find basic **configuration variables** in the `.env` file. As stated before, we encourage you to edit these values, especially those affecting the security.
 
-These vars will be used to create the database for Taiga and connect to it.
+### Database settings
 
-**Important**: these vars should have the same values in `taiga-back` and `taiga-db`.
+These vars are used to create the database for Taiga and connect to it.
 
-**Service: taiga-db**
-
-```
-POSTGRES_DB: taiga
-POSTGRES_USER: taiga
-POSTGRES_PASSWORD: taiga
+```bash
+POSTGRES_DB=taiga  # PostgreSQL database name
+POSTGRES_USER=taiga  # user to connect to PostgreSQL
+POSTGRES_PASSWORD=taiga  # database user's password
 ```
 
-**Service: taiga-back**
+### URLs settings
 
-```
-POSTGRES_DB: taiga
-POSTGRES_USER: taiga
-POSTGRES_PASSWORD: taiga
-```
+These vars set where your Taiga instance should be served, and the security protocols to use in the communication layer.
 
-Additionally, you can also configure `POSTGRES_PORT` in `taiga-back`. Defaults to '5432'.
-
-### Taiga Settings
-
-**Service: taiga-back**
-
-The default configuration assumes Taiga is being served in a **subdomain**:
-
-```
-TAIGA_SECRET_KEY: "taiga-back-secret-key"
-TAIGA_SITES_SCHEME: "https"
-TAIGA_SITES_DOMAIN: "taiga.mycompany.com"
-TAIGA_SUBPATH: "/"
+```bash
+TAIGA_SCHEME=http  # serve Taiga using "http" or "https" (secured) connection
+TAIGA_DOMAIN=localhost:9000  # Taiga's base URL
+SUBPATH=""  # it'll be appended to the TAIGA_DOMAIN (use either "" or a "/subpath")
+WEBSOCKETS_SCHEME=ws  # events connection protocol (use either "ws" or "wss")
 ```
 
-If Taiga is being served in a **subpath** instead of a subdomain, the configuration should be something like:
+The default configuration assumes Taiga is being served in a **subdomain**. For example:
 
-```
-TAIGA_SECRET_KEY: "taiga-back-secret-key"
-TAIGA_SITES_SCHEME: "https"
-TAIGA_SITES_DOMAIN: "mycompany.com/taiga"
-TAIGA_SUBPATH: "/taiga" # Mind just one slash
-```
-
-**Service: taiga-front**
-
-The default configuration assumes Taiga is being served in a **subdomain**:
-
-```
-TAIGA_URL: "https://taiga.mycompany.com"
-TAIGA_WEBSOCKETS_URL: "wss://taiga.mycompany.com"
-TAIGA_SUBPATH: "/"
+```bash
+TAIGA_SCHEME=https
+TAIGA_DOMAIN=taiga.mycompany.com
+SUBPATH=""
+WEBSOCKETS_SCHEME=wss
 ```
 
-If Taiga is being served in a **subpath** instead of a subdomain, the configuration should be something like:
+If Taiga is being served in a **subpath**, instead of a subdomain, the configuration should be something like this:
 
-```
-TAIGA_URL: "https://mycompany.com/taiga"
-TAIGA_WEBSOCKETS_URL: "wss://mycompany.com/taiga"
-TAIGA_SUBPATH: "/taiga/" # Mind both slashes
-
-```
-
-**Service: taiga-events**
-
-```
-TAIGA_SECRET_KEY: taiga-back-secret-key
+```bash
+TAIGA_SCHEME=https
+TAIGA_DOMAIN=mycompany.com
+SUBPATH="/taiga"
+WEBSOCKETS_SCHEME=wss
 ```
 
-**Service: taiga-protected**
+### Secret Key settings
 
+This variable allows you to set the secret key in Taiga, used in the cryptographic signing.
+
+```bash
+SECRET_KEY="taiga-secret-key"  # Please, change it to an unpredictable value!
 ```
-SECRET_KEY: "taiga-back-secret-key"
-```
-
-`TAIGA_SECRET_KEY` is the secret key of Taiga. Should be the same as this var in `taiga-back`, `taiga-events` and `taiga-protected`.
-`TAIGA_URL` is where this Taiga instance should be served. It should be the same as `TAIGA_SITES_SCHEME`://`TAIGA_SITES_DOMAIN`.
-`TAIGA_WEBSOCKETS_URL` is used to connect to the events. This should have the same value as `TAIGA_SITES_DOMAIN`, ie: wss://taiga.mycompany.com.
-
-### Session Settings
-
-Taiga doesn't use session cookies in its API as it stateless. However, the Django Admin (`/admin/`) uses session cookie for authentication. By default, Taiga is configured to work behind HTTPS. If you're using HTTP (despite de strong recommendations against it), you'll need to configure the following environment variables so you can access the Admin:
-
-**Service: taiga-back**
-
-```
-SESSION_COOKIE_SECURE: "False"
-CSRF_COOKIE_SECURE: "False"
-```
-
-More info about those variables can be found [here](https://docs.djangoproject.com/en/3.1/ref/settings/#csrf-cookie-secure).
 
 ### Email Settings
 
-By default, email is configured with the _console_ backend, which means that the emails will be shown in the stdout. If you have an smtp service, uncomment the "Email settings" section in `docker-compose.yml` and configure those environment variables:
+BBy default, emails will be printed in the standard output (`EMAIL_BACKEND=**console**`). If you have your own SMTP service, change it to `EMAIL_BACKEND=**smtp**` and configure the rest of these variables with the values supplied by your SMTP provider:
 
-**Service: taiga-back**
+```bash
+EMAIL_BACKEND=console  # use an SMTP server or display the emails in the console (either "smtp" or "console")
+EMAIL_HOST=smtp.host.example.com  # SMTP server address
+EMAIL_PORT=587   # default SMTP port
+EMAIL_HOST_USER=user  # user to connect the SMTP server
+EMAIL_HOST_PASSWORD=password  # SMTP user's password
+EMAIL_DEFAULT_FROM=changeme@example.com  # email address for the automated emails
 
+# EMAIL_USE_TLS/EMAIL_USE_SSL are mutually exclusive (only set one of those to True)
+EMAIL_USE_TLS=True  # use TLS (secure) connection with the SMTP server
+EMAIL_USE_SSL=False  # use implicit TLS (secure) connection with the SMTP server
 ```
-EMAIL_BACKEND: "django.core.mail.backends.smtp.EmailBackend"
-DEFAULT_FROM_EMAIL: "no-reply@mycompany.com"
-EMAIL_HOST: "smtp.host.mycompany.com"
-EMAIL_PORT: 587
-EMAIL_HOST_USER: "user"
-EMAIL_HOST_PASSWORD: "password"
-EMAIL_USE_TLS: "True"
-EMAIL_USE_SSL: "True"
+
+### Queue manager settings
+
+These variables are used to leave messages in the rabbitmq services.
+
+```bash
+RABBITMQ_USER=taiga  # user to connect to RabbitMQ
+RABBITMQ_PASS=taiga  # RabbitMQ user's password
+RABBITMQ_VHOST=taiga  # RabbitMQ container name
+RABBITMQ_ERLANG_COOKIE=secret-erlang-cookie  # unique value shared by any connected instance of RabbitMQ
 ```
 
-Uncomment `EMAIL_BACKEND` variable, but do not modify unless you know what you're doing.
+### Attachments settings
+
+You can configure how long the attachments will be accessible by changing the token expiration timer. After that amount of seconds the token will expire, but you can always get a new attachment url with an active token.
+
+```bash
+ATTACHMENTS_MAX_AGE=360  # token expiration date (in seconds)
+```
+
 
 ### Telemetry Settings
 
 Telemetry anonymous data is collected in order to learn about the use of Taiga and improve the platform based on real scenarios.
 
-**Service: taiga-back**
-
-```
-ENABLE_TELEMETRY: "True"
+```bash
+ENABLE_TELEMETRY=True
 ```
 
-You can opt out by setting this variable to "False". By default is "True".
-
-### Rabbit settings
-
-These variables are used to leave messages in the rabbitmq services. These variables should be the same as in `taiga-back`, `taiga-async`, `taiga-events`, `taiga-async-rabbitmq` and `taiga-events-rabbitmq`.
-
-**Service: taiga-back**
-
-```
-RABBITMQ_USER: taiga
-RABBITMQ_PASS: taiga
-```
-
-Two other variables `EVENTS_PUSH_BACKEND_URL` and `CELERY_BROKER_URL` can also be used to set the events push backend URL and celery broker URL.
-
-```
-EVENTS_PUSH_BACKEND_URL: "amqp://taiga:taiga@taiga-events-rabbitmq:5672/taiga"
-CELERY_BROKER_URL: "amqp://taiga:taiga@taiga-async-rabbitmq:5672/taiga"
-```
-
-**Service: taiga-events**
-
-```
-RABBITMQ_USER: taiga
-RABBITMQ_PASS: taiga
-```
-
-**Service: taiga-async-rabbitmq**
-
-```
-RABBITMQ_ERLANG_COOKIE: secret-erlang-cookie
-RABBITMQ_DEFAULT_USER: taiga
-RABBITMQ_DEFAULT_PASS: taiga
-RABBITMQ_DEFAULT_VHOST: taiga
-```
-
-**Service: taiga-events-rabbitmq**
-
-```
-RABBITMQ_ERLANG_COOKIE: secret-erlang-cookie
-RABBITMQ_DEFAULT_USER: taiga
-RABBITMQ_DEFAULT_PASS: taiga
-RABBITMQ_DEFAULT_VHOST: taiga
-```
-
-### Taiga protected settings
-
-**Service: taiga-protected**
-
-```
-MAX_AGE: 360
-```
-
-The attachments will be accesible with a token during MAX_AGE (in seconds). After that, the token will expire.
+You can opt out by setting this variable to False. By default, it's True.
 
 ## Customisation
 
